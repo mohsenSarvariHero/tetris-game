@@ -2,6 +2,7 @@ import React from 'react';
 import { GameSettings, ThemeId, ControlsLayout } from '../types/tetris';
 import { X, Volume2, Music, Vibrate, Eye, Smartphone, Palette } from 'lucide-react';
 import { THEMES } from '../utils/tetrisConstants';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface SettingsModalProps {
   settings: GameSettings;
@@ -194,6 +195,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               className="w-full accent-cyan-500 cursor-pointer"
             />
           </div>
+        </div>
+
+        {/* PWA Install Option */}
+        <div className="pt-2 border-t border-slate-800">
+          <PWAInstallButton variant="prominent" />
         </div>
 
         {/* Done Button */}

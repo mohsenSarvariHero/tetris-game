@@ -39,7 +39,11 @@ export function useTetris() {
   const [settings, setSettings] = useState<GameSettings>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_SETTINGS);
-      if (saved) return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.controlsLayout === 'buttons') parsed.controlsLayout = 'hybrid';
+        return { ...DEFAULT_SETTINGS, ...parsed };
+      }
     } catch {}
     return DEFAULT_SETTINGS;
   });

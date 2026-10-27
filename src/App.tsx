@@ -11,6 +11,7 @@ import { GameOverModal } from './components/GameOverModal';
 import { SettingsModal } from './components/SettingsModal';
 import { ModeSelectModal } from './components/ModeSelectModal';
 import { TitleScreen } from './components/TitleScreen';
+import { OfflineIndicator } from './components/OfflineIndicator';
 import { GameMode } from './types/tetris';
 
 export default function App() {
@@ -40,6 +41,9 @@ export default function App() {
 
   return (
     <div className="arcade-bg w-full h-[100dvh] flex flex-col items-center justify-between overflow-hidden select-none text-slate-100 font-sans">
+      {/* Offline Status Toast */}
+      <OfflineIndicator />
+
       {/* Top Header Bar */}
       <HeaderBar
         mode={mode}
@@ -99,7 +103,7 @@ export default function App() {
                 notifications={notifications}
                 controlsLayout={settings.controlsLayout}
                 onMove={actions.moveHorizontal}
-                onRotate={() => actions.rotate(1)}
+                onRotate={(dir = 1) => actions.rotate(dir)}
                 onSoftDrop={actions.dropStep}
                 onHardDrop={actions.hardDrop}
                 onHold={actions.holdPiece}

@@ -171,5 +171,5 @@ export const DEFAULT_SETTINGS: GameSettings = {
   das: 130, // Delay before auto-repeat kicks in
   arr: 35,  // Auto-repeat rate in ms
   theme: 'cyberpunk',
-  controlsLayout: 'buttons',
+  controlsLayout: 'hybrid',
 };

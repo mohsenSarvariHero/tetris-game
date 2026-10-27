@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useState } from 'react';
 import { Matrix, Piece, ThemeId, FloatingNotification, ControlsLayout } from '../types/tetris';
 import { BOARD_HEIGHT, BOARD_WIDTH, THEMES } from '../utils/tetrisConstants';
 import { getGhostY } from '../utils/tetrisLogic';
@@ -13,7 +13,7 @@ interface GameBoardProps {
   notifications: FloatingNotification[];
   controlsLayout: ControlsLayout;
   onMove: (dx: number) => void;
-  onRotate: () => void;
+  onRotate: (dir?: 1 | -1) => void;
   onSoftDrop: () => void;
   onHardDrop: () => void;
   onHold: () => void;
@@ -37,6 +37,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const boardRef = useRef<HTMLDivElement>(null);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const lastMoveXRef = useRef<number>(0);
+  const lastMoveYRef = useRef<number>(0);
+  const hasMovedRef = useRef<boolean>(false);
+  const softDropTimerRef = useRef<number | null>(null);
+
+  // Visual tap ripple state
+  const [tapRipple, setTapRipple] = useState<{ x: number; y: number; id: number } | null>(null);
 
   const themePalette = THEMES[theme];
 
@@ -46,9 +52,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     return getGhostY(currentPiece, matrix);
   }, [currentPiece, matrix, ghostPieceEnabled]);
 
-  // Touch gesture handling on the game board (for Gestures / Hybrid control mode)
+  // Touch gesture handling on the game board
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (controlsLayout === 'buttons') return;
     const touch = e.touches[0];
     touchStartRef.current = {
       x: touch.clientX,
@@ -56,50 +61,97 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       time: Date.now(),
     };
     lastMoveXRef.current = touch.clientX;
+    lastMoveYRef.current = touch.clientY;
+    hasMovedRef.current = false;
+
+    if (softDropTimerRef.current) {
+      window.clearInterval(softDropTimerRef.current);
+      softDropTimerRef.current = null;
+    }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (controlsLayout === 'buttons' || !touchStartRef.current) return;
+    if (!touchStartRef.current || !boardRef.current) return;
     const touch = e.touches[0];
-    const deltaX = touch.clientX - lastMoveXRef.current;
-    const cellThreshold = 26; // Drag 26px to move 1 column
 
-    if (Math.abs(deltaX) >= cellThreshold) {
-      const steps = Math.floor(Math.abs(deltaX) / cellThreshold);
+    // Get actual width of a column cell dynamically based on rendered board size
+    const rect = boardRef.current.getBoundingClientRect();
+    const cellWidth = Math.max(18, rect.width / BOARD_WIDTH);
+    const cellHeight = Math.max(18, rect.height / BOARD_HEIGHT);
+
+    // Horizontal movement: 1 step per cell width dragged
+    const deltaX = touch.clientX - lastMoveXRef.current;
+    if (Math.abs(deltaX) >= cellWidth * 0.8) {
+      const steps = Math.floor(Math.abs(deltaX) / (cellWidth * 0.8));
       const dir = deltaX > 0 ? 1 : -1;
       for (let i = 0; i < steps; i++) {
         onMove(dir);
       }
       lastMoveXRef.current = touch.clientX;
+      hasMovedRef.current = true;
     }
 
-    const deltaY = touch.clientY - touchStartRef.current.y;
-    if (deltaY > 50) {
-      onSoftDrop();
+    // Downward drag: triggers soft drop
+    const deltaY = touch.clientY - lastMoveYRef.current;
+    if (deltaY >= cellHeight * 1.2) {
+      const dropSteps = Math.floor(deltaY / (cellHeight * 1.2));
+      for (let i = 0; i < dropSteps; i++) {
+        onSoftDrop();
+      }
+      lastMoveYRef.current = touch.clientY;
+      hasMovedRef.current = true;
     }
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (controlsLayout === 'buttons' || !touchStartRef.current) return;
+    if (softDropTimerRef.current) {
+      window.clearInterval(softDropTimerRef.current);
+      softDropTimerRef.current = null;
+    }
+
+    if (!touchStartRef.current || !boardRef.current) return;
     const touch = e.changedTouches[0];
     const totalDeltaX = touch.clientX - touchStartRef.current.x;
     const totalDeltaY = touch.clientY - touchStartRef.current.y;
     const duration = Date.now() - touchStartRef.current.time;
 
-    // Quick tap = Rotate
-    if (Math.abs(totalDeltaX) < 14 && Math.abs(totalDeltaY) < 14 && duration < 250) {
-      onRotate();
+    const rect = boardRef.current.getBoundingClientRect();
+    const touchXRel = touch.clientX - rect.left;
+
+    // 1. FAST SWIPE UP = HOLD PIECE
+    if (totalDeltaY < -38 && Math.abs(totalDeltaX) < 45 && duration < 320) {
+      onHold();
     }
-    // Fast swipe down = Hard Drop
-    else if (totalDeltaY > 60 && Math.abs(totalDeltaX) < 40 && duration < 250) {
+    // 2. FAST FLICK DOWN = HARD DROP (instant drop)
+    else if (totalDeltaY > 55 && Math.abs(totalDeltaX) < 45 && duration < 240) {
       onHardDrop();
     }
-    // Swipe up = Hold
-    else if (totalDeltaY < -40 && Math.abs(totalDeltaX) < 40 && duration < 300) {
-      onHold();
+    // 3. TAP = ROTATE (clean tap without dragging)
+    else if (!hasMovedRef.current && Math.abs(totalDeltaX) < 18 && Math.abs(totalDeltaY) < 18 && duration < 280) {
+      // Tap on left 35% -> Counter-Clockwise (CCW), tap on right 65% -> Clockwise (CW)
+      const isLeftTap = touchXRel < rect.width * 0.35;
+      onRotate(isLeftTap ? -1 : 1);
+
+      // Trigger ripple feedback
+      setTapRipple({
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top,
+        id: Date.now(),
+      });
+      setTimeout(() => setTapRipple(null), 300);
     }
 
     touchStartRef.current = null;
+    hasMovedRef.current = false;
+  };
+
+  const handleTouchCancel = () => {
+    if (softDropTimerRef.current) {
+      window.clearInterval(softDropTimerRef.current);
+      softDropTimerRef.current = null;
+    }
+    touchStartRef.current = null;
+    hasMovedRef.current = false;
   };
 
   // Build display cells combining matrix, ghost, and active falling piece
@@ -168,7 +220,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className={`game-touch-surface relative w-full aspect-[1/2] rounded-xl overflow-hidden border-2 transition-transform duration-75 shadow-2xl ${
+        onTouchCancel={handleTouchCancel}
+        className={`game-touch-surface relative w-full aspect-[1/2] rounded-xl overflow-hidden border-2 transition-transform duration-75 shadow-2xl cursor-grab active:cursor-grabbing ${
           screenShake ? 'translate-y-1 scale-[0.99] rotate-[0.5deg]' : ''
         }`}
         style={{
@@ -180,6 +233,19 @@ export const GameBoard: React.FC<GameBoardProps> = ({
               : '0 20px 40px -15px rgba(0, 0, 0, 0.7), inset 0 0 30px rgba(0, 0, 0, 0.6)',
         }}
       >
+        {/* Subtle touch indicator / ripple */}
+        {tapRipple && (
+          <div
+            className="absolute pointer-events-none rounded-full border border-cyan-400 bg-cyan-400/20 animate-ping z-30"
+            style={{
+              left: tapRipple.x - 24,
+              top: tapRipple.y - 24,
+              width: 48,
+              height: 48,
+            }}
+          />
+        )}
+
         {/* Subtle grid background lines */}
         <div
           className="absolute inset-0 pointer-events-none"
@@ -193,7 +259,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         />
 
         {/* 10x20 Grid Display */}
-        <div className="grid grid-cols-10 grid-rows-20 w-full h-full p-0.5">
+        <div className="grid grid-cols-10 grid-rows-20 w-full h-full p-0.5 pointer-events-none">
           {displayGrid.flatMap((row, r) =>
             row.map((cell, c) => {
               if (cell.isClearing) {

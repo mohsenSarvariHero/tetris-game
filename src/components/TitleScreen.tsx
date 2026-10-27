@@ -1,6 +1,7 @@
 import React from 'react';
 import { GameMode } from '../types/tetris';
 import { Play, Sparkles, Keyboard, Touchpad } from 'lucide-react';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface TitleScreenProps {
   mode: GameMode;
@@ -60,11 +61,16 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
       <button
         type="button"
         onClick={onStartGame}
-        className="w-full max-w-xs py-3.5 px-6 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-black text-base tracking-wide flex items-center justify-center gap-2 shadow-xl shadow-cyan-500/25 active:scale-98 transition-all mb-6 cursor-pointer"
+        className="w-full max-w-xs py-3.5 px-6 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-black text-base tracking-wide flex items-center justify-center gap-2 shadow-xl shadow-cyan-500/25 active:scale-98 transition-all mb-3 cursor-pointer"
       >
         <Play className="w-5 h-5 fill-slate-950" />
         <span>START GAME</span>
       </button>
+
+      {/* In-App PWA Install Banner */}
+      <div className="w-full max-w-xs mb-5">
+        <PWAInstallButton variant="prominent" />
+      </div>
 
       {/* Controls Quick Hints */}
       <div className="w-full bg-slate-900/40 border border-slate-800/60 rounded-xl p-3 text-[11px] text-slate-400 flex flex-col gap-2">
@@ -72,8 +78,8 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
           <Touchpad className="w-3.5 h-3.5 text-cyan-400" />
           <span>Mobile Touch & Haptics</span>
         </div>
-        <div className="text-slate-400 text-[10px] leading-relaxed">
-          Use the ergonomic thumb controls below or drag on screen. Tap to rotate, flick down to drop!
+        <div className="text-slate-300 text-[11px] leading-relaxed">
+          👉 <strong>Touch anywhere on screen:</strong> Slide to steer · Tap right/left to rotate · Drag down to drop · Flick down for hard drop · Swipe up to hold!
         </div>
 
         <div className="hidden sm:flex items-center justify-center gap-1 text-slate-400 text-[10px] pt-1 border-t border-slate-800/60">

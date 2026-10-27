@@ -1,6 +1,7 @@
 import React from 'react';
 import { GameMode, GameStatus } from '../types/tetris';
 import { Volume2, VolumeX, Pause, Play, Settings as SettingsIcon } from 'lucide-react';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface HeaderBarProps {
   mode: GameMode;
@@ -50,6 +51,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
       {/* Zone 3: Primary quick controls */}
       <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        <PWAInstallButton variant="compact" />
         <button
           type="button"
           onClick={onToggleSound}
