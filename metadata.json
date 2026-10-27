@@ -1,0 +1,6 @@
+{
+  "name": "Tetris Touch Arcade",
+  "description": "Mobile-first responsive Tetris arcade game featuring SRS rotation, ghost piece, hold queue, haptics, and synthesized retro sound.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
